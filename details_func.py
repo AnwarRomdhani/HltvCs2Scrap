@@ -1,11 +1,11 @@
 import csv
+import os  # To check if the file exists
 from selenium import webdriver
 from selenium.webdriver.edge.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import traceback
-import os
 
 def setup_edge_driver():
     """
@@ -31,6 +31,22 @@ def scrape_teams_box(driver, wait):
         traceback.print_exc()
         return ""
 
+def scrape_maps_div(driver, wait):
+    """
+    Scrape the content of the <div> with class 'box-headline flexbox nowrap header'.
+    """
+    try:
+        print("\nWaiting for the maps div to load...")
+        maps_div = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".box-headline.flexbox.nowrap.header"))
+        )
+        print("Maps div found. Scraping content...")
+        return maps_div.text.strip()
+    except Exception as e:
+        print("Error while scraping maps div:")
+        traceback.print_exc()
+        return ""
+
 def extract_match_metadata(teams_box_content):
     """
     Extract match metadata: match name, winning team, losing team, and score.
@@ -42,26 +58,26 @@ def extract_match_metadata(teams_box_content):
     score = f"{lines[-1]} - {lines[1]}" if len(lines) > 1 else "Unknown Score"  # Format: "Winning score - Losing score"
     return match_name, winning_team, losing_team, score
 
-def save_to_csv(match_name, winning_team, losing_team, score, tables_data, filename):
+def save_to_csv(match_name, winning_team, losing_team, score, maps, tables_data, filename):
     """
-    Save match metadata and player statistics to a structured CSV file.
-    If the file exists, append data; otherwise, create a new file.
+    Save match metadata, maps, and player statistics to a structured CSV file.
+    Append data if the file already exists.
     """
-    file_exists = os.path.isfile(filename)  # Check if file already exists
+    file_exists = os.path.isfile(filename)  # Check if the file exists
 
     try:
-        with open(filename, mode='a', newline='', encoding='utf-8') as file:  # Open in append mode
+        with open(filename, mode='a', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
 
-            # If the file is new, write headers first
+            # Write headers only if the file is being created
             if not file_exists:
-                writer.writerow(["Match", "Winning Team", "Losing Team", "Score"])
-                writer.writerow([])  # Blank line before player stats
+                # Metadata Header
+                writer.writerow(["Match", "Winning Team", "Losing Team", "Score", "Maps Played"])
+                # Player Stats Header
                 writer.writerow(["Team", "Player Name", "K-D", "+/-", "ADR", "KAST", "Rating"])
 
             # Write match metadata
-            writer.writerow([match_name, winning_team, losing_team, score])
-            writer.writerow([])  # Blank line
+            writer.writerow([match_name, winning_team, losing_team, score, maps])
 
             # Write player statistics
             for table_index, (team_name, rows) in tables_data.items():
@@ -73,9 +89,9 @@ def save_to_csv(match_name, winning_team, losing_team, score, tables_data, filen
         print("Error saving to CSV:")
         traceback.print_exc()
 
-def scrape_hltv_match(url, output_file="structured_scraped_data.csv"):
+def scrape_match_data(url):
     """
-    Scrape data from the given HLTV match URL and save it to a CSV file.
+    Scrape match data from the given URL, including teams, scores, maps, and player performance.
     """
     driver = setup_edge_driver()
     tables_data = {}
@@ -90,6 +106,9 @@ def scrape_hltv_match(url, output_file="structured_scraped_data.csv"):
         # Scrape the teams box content
         teams_box_content = scrape_teams_box(driver, wait)
         match_name, winning_team, losing_team, score = extract_match_metadata(teams_box_content)
+
+        # Scrape the maps information
+        maps_info = scrape_maps_div(driver, wait)
 
         print("\nWaiting for tables to load...")
         # Locate all tables with the desired classes
@@ -112,8 +131,9 @@ def scrape_hltv_match(url, output_file="structured_scraped_data.csv"):
 
             tables_data[f"Table {table_index}"] = (team_name, table_data)
 
-        # Save the data to a CSV file
-        save_to_csv(match_name, winning_team, losing_team, score, tables_data, output_file)
+        # Save all the scraped data to a CSV file
+        filename = "match_data.csv"
+        save_to_csv(match_name, winning_team, losing_team, score, maps_info, tables_data, filename)
 
     except Exception as e:
         print("Error during scraping:")
@@ -121,7 +141,7 @@ def scrape_hltv_match(url, output_file="structured_scraped_data.csv"):
     finally:
         driver.quit()
 
-# Example usage
-if __name__ == "__main__":
-    url = "https://www.hltv.org/matches/2377734/g2-vs-faze-perfect-world-shanghai-major-2024"
-    scrape_hltv_match(url, "structured_scraped_data_with_score.csv")
+"""if __name__ == "__main__":
+    # Example usage of the function
+    match_url = "https://www.hltv.org/matches/2378056/shimmer-vs-lotus-fe-esl-impact-autumn-2024-cash-cup-6-north-america"
+    scrape_match_data(match_url) """

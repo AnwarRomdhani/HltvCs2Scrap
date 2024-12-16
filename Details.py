@@ -30,6 +30,22 @@ def scrape_teams_box(driver, wait):
         traceback.print_exc()
         return ""
 
+def scrape_maps_div(driver, wait):
+    """
+    Scrape the content of the <div> with class 'box-headline flexbox nowrap header'.
+    """
+    try:
+        print("\nWaiting for the maps div to load...")
+        maps_div = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".box-headline.flexbox.nowrap.header"))
+        )
+        print("Maps div found. Scraping content...")
+        return maps_div.text.strip()
+    except Exception as e:
+        print("Error while scraping maps div:")
+        traceback.print_exc()
+        return ""
+
 def extract_match_metadata(teams_box_content):
     """
     Extract match metadata: match name, winning team, losing team, and score.
@@ -41,9 +57,9 @@ def extract_match_metadata(teams_box_content):
     score = f"{lines[-1]} - {lines[1]}" if len(lines) > 1 else "Unknown Score"  # Format: "Winning score - Losing score"
     return match_name, winning_team, losing_team, score
 
-def save_to_csv(match_name, winning_team, losing_team, score, tables_data, filename):
+def save_to_csv(match_name, winning_team, losing_team, score, maps, tables_data, filename):
     """
-    Save match metadata and player statistics to a structured CSV file.
+    Save match metadata, maps, and player statistics to a structured CSV file.
     """
     try:
         with open(filename, mode='w', newline='', encoding='utf-8') as file:
@@ -54,6 +70,11 @@ def save_to_csv(match_name, winning_team, losing_team, score, tables_data, filen
             writer.writerow(["Winning Team", winning_team])
             writer.writerow(["Losing Team", losing_team])
             writer.writerow(["Score", score])
+            writer.writerow([])  # Blank line
+
+            # Write maps information
+            writer.writerow(["Maps Played"])
+            writer.writerow([maps])
             writer.writerow([])  # Blank line
 
             # Write player statistics
@@ -67,9 +88,9 @@ def save_to_csv(match_name, winning_team, losing_team, score, tables_data, filen
         print("Error saving to CSV:")
         traceback.print_exc()
 
-def scrape_all_tables_and_teams_box():
+def scrape_all_data():
     """
-    Scrape the teams box content and all tables with the class 'table totalstats', and save the results to a CSV file.
+    Scrape the teams box, maps, and all tables with the class 'table totalstats', and save the results to a CSV file.
     """
     driver = setup_edge_driver()
     url = "https://www.hltv.org/matches/2377734/g2-vs-faze-perfect-world-shanghai-major-2024"
@@ -85,6 +106,9 @@ def scrape_all_tables_and_teams_box():
         # Scrape the teams box content
         teams_box_content = scrape_teams_box(driver, wait)
         match_name, winning_team, losing_team, score = extract_match_metadata(teams_box_content)
+
+        # Scrape the maps information
+        maps_info = scrape_maps_div(driver, wait)
 
         print("\nWaiting for tables to load...")
         # Locate all tables with the desired classes
@@ -107,8 +131,8 @@ def scrape_all_tables_and_teams_box():
 
             tables_data[f"Table {table_index}"] = (team_name, table_data)
 
-        # Save the data to a CSV file
-        save_to_csv(match_name, winning_team, losing_team, score, tables_data, "structured_scraped_data_with_score.csv")
+        # Save all the scraped data to a CSV file
+        save_to_csv(match_name, winning_team, losing_team, score, maps_info, tables_data, "match_details.csv")
 
     except Exception as e:
         print("Error during scraping:")
@@ -117,4 +141,4 @@ def scrape_all_tables_and_teams_box():
         driver.quit()
 
 if __name__ == "__main__":
-    scrape_all_tables_and_teams_box()
+    scrape_all_data()
