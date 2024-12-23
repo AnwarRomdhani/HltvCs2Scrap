@@ -34,7 +34,6 @@ def save_to_csv(filename, data, headers=None):
             if headers and mode == 'w':
                 writer.writerow(headers)
             writer.writerows([[item] for item in data])
-            writer.writerow('\n')
         print(f"Data saved to {filename}")
     except Exception as e:
         print(f"Error saving to {filename}: {e}")
@@ -88,7 +87,6 @@ def scrape_links_and_next_page(url):
     finally:
         driver.quit()
 
-# Example usage
 """if __name__ == "__main__":
     example_url = "https://www.hltv.org/results"
     scrape_links_and_next_page(example_url)"""

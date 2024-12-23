@@ -9,8 +9,10 @@ import csv
 #data=initialize()
 print(next_batch()[0])
 #scrape_links_and_next_page(next_batch()[0])
-data=next("https://www.hltv.org/matches/2377945/sashi-vs-aurora-young-blud-european-pro-league-season-21")
-print(data)
+
+data=next("https://www.hltv.org/matches/2377612/lg-vs-astralis-talent-european-pro-league-2nd-division-season-17")
+print(len(data))
+#print(data[-1])
 while True:
     data=[f[0] for f in data]
     last=data[-1]
@@ -20,7 +22,5 @@ while True:
         #print(d)
         #input()
         scrape_match_data(str(d))
-    if input()=="O":
-        break
     scrape_links_and_next_page(next_batch()[0])
-    data=next(last[0])
+    data=next(last)
